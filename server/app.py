@@ -25,6 +25,74 @@ db.init_app(app)
 def home():
     return ''
 
+@app.route('/scientists', methods=['GET'])
+def get_scientists():
+    scientists = Scientist.query.all()
+    return jsonify([s.to_dict(only=('id', 'name', 'field_of_study')) for s in scientists])
+
+@app.route('/scientists/<int:id>', methods=['GET'])
+def get_scientist(id):
+    scientist = Scientist.query.get(id)
+    if not scientist:
+        return jsonify({"error": "Scientist not found"}), 404
+    return jsonify(scientist.to_dict())
+
+@app.route('/scientists', methods=['POST'])
+def create_scientist():
+    data = request.get_json()
+    if 'name' not in data or 'field_of_study' not in data:
+        return jsonify({"errors": ["validation errors"]}), 400
+    try:
+        scientist = Scientist(name=data['name'], field_of_study=data['field_of_study'])
+        db.session.add(scientist)
+        db.session.commit()
+        return jsonify(scientist.to_dict()), 201
+    except ValueError:
+        return jsonify({"errors": ["validation errors"]}), 400
+
+@app.route('/scientists/<int:id>', methods=['PATCH'])
+def update_scientist(id):
+    scientist = Scientist.query.get(id)
+    if not scientist:
+        return jsonify({"error": "Scientist not found"}), 404
+    data = request.get_json()
+    try:
+        if 'name' in data:
+            scientist.name = data['name']
+        if 'field_of_study' in data:
+            scientist.field_of_study = data['field_of_study']
+        db.session.commit()
+        return jsonify(scientist.to_dict()), 202
+    except ValueError:
+        return jsonify({"errors": ["validation errors"]}), 400
+
+@app.route('/scientists/<int:id>', methods=['DELETE'])
+def delete_scientist(id):
+    scientist = Scientist.query.get(id)
+    if not scientist:
+        return jsonify({"error": "Scientist not found"}), 404
+    db.session.delete(scientist)
+    db.session.commit()
+    return make_response('', 204, {'Content-Type': 'application/json'})
+
+@app.route('/planets', methods=['GET'])
+def get_planets():
+    planets = Planet.query.all()
+    return jsonify([p.to_dict(only=('id', 'name', 'distance_from_earth', 'nearest_star')) for p in planets])
+
+@app.route('/missions', methods=['POST'])
+def create_mission():
+    data = request.get_json()
+    if 'name' not in data or 'scientist_id' not in data or 'planet_id' not in data:
+        return jsonify({"errors": ["validation errors"]}), 400
+    try:
+        mission = Mission(name=data['name'], scientist_id=data['scientist_id'], planet_id=data['planet_id'])
+        db.session.add(mission)
+        db.session.commit()
+        return jsonify(mission.to_dict()), 201
+    except ValueError:
+        return jsonify({"errors": ["validation errors"]}), 400
+
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
